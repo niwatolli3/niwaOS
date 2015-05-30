@@ -1,8 +1,8 @@
 ;*********************************
 ; BootLoader
 ;*********************************
-org	0x7c00
-bits	16
+ORG	0x7c00
+BITS	16
 
 ;========================================
 ; BIOS Parameter Blog (BPB) for FAT12
@@ -28,7 +28,14 @@ BS_VolID	DD	0x00000000
 BS_VolLab	DB	"NiwaOS     "
 BS_FileSysType	DB	"FAT12    "
 
+%include "printstring.asm"
+
+string:
+	DB 'Hello World!', 0
+
 BOOT:
+	MOV SI, string
+	CALL PrintString
 	CLI
 	HLT
 

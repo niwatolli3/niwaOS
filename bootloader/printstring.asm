@@ -1,6 +1,9 @@
 ;*********************************
-; BootLoader
+; printstring
 ;*********************************
+%ifndef PRINTSTRING_ASM
+%define PRINTSTRING_ASM
+
 org	0x7c00
 bits	16
 
@@ -15,7 +18,7 @@ PrintChar:
 	INT 0x10	
 	RET
 
-; input: AL(pointer of string)
+; input: SI(pointer of string)
 PrintString:
 	;MOV SI, string
 	
@@ -32,3 +35,4 @@ PrintString:
 ;string:
 ;	db 'Hello World!', 0
 
+%endif
