@@ -26,7 +26,8 @@ BS_Reserved1	DB	0x00
 BS_BootSig	DB	0x29
 BS_VolID	DD	0x00000000
 BS_VolLab	DB	"NiwaOS     "
-BS_FileSysType	DB	"FAT12    "
+BS_FilSysType	DB	"FAT12   "
+
 
 %include "printstring.asm"
 
