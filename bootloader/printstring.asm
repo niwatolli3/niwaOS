@@ -4,7 +4,7 @@
 %ifndef PRINTSTRING_ASM
 %define PRINTSTRING_ASM
 
-org	0x7c00
+;org	0x7c00
 bits	16
 
 PrintChar:

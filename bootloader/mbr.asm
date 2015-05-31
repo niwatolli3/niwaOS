@@ -2,13 +2,14 @@
 ; BootLoader (MBR Only)
 ;*********************************
 ORG	0x7c00
+;ORG	0x00
 BITS	16
 
 ;*********************************
 ; const value
 ;*********************************
 CYLS EQU 10	; cylinders
-AX_FAT_ADDR EQU	0x7E00	; memory of FAT
+AX_FAT_ADDR EQU	0x07E0	; memory of FAT(*0.1 value)
 
 ;========================================
 ; BIOS Parameter Blog (BPB) for FAT12
@@ -61,8 +62,7 @@ ResetFDDFailed:
 ; input: ES: address of memory
 ; input: CH: cylinder (0-indexed)
 ; input: DH: head (0-indexed)
-; input: CL: sector (1-indexed, 1-18)
-;*************
+; input: CL: sector (1-indexed, 1-18) ;*************
 ReadSector:
 	MOV	SI, 0	; retry count
 retry:
@@ -122,10 +122,10 @@ BOOT:
 	CALL ReadFATSectors
 	CALL ResetFDD
 readCylinders:
-	MOV	AX, AX_FAT_ADDR ; FAT address on memory
-	ADD	AX, [BPB_BytsPerSec]	; 512bytes = 1 sector
-	MOV	BX, 19
+	MOV	AX, [BPB_BytsPerSec]	; 512bytes = 1 sector
+	MOV	BX, 17
 	MUL	BX			; AX * BX(19sectors)
+	ADD	AX, AX_FAT_ADDR		; FAT address on memory
 	MOV	ES, AX
 	MOV	CH, 0	; cylinder 0
 	MOV	DH, 1	; head 1 (back)
@@ -151,10 +151,10 @@ readCylinders:
 	JAE	.readCylindersFin	; CH >= CYLS
 	CALL	ReadSector		; CH < CYLS
 .readCylindersFin:
-	CLI
-	MOV	AX, AX_FAT_ADDR
-	ADD	AX, 0x4200
-	JMP	AX
+	MOV	SI, 0xBE00
+	JMP	SI			; 0x7E00+0x4200-512
+	MOV	SI, string
+	CALL	PrintString
 	HLT
 
 	TIMES 510 - ($ - $$) DB 0	; Clear the rest of the bytes with 0
