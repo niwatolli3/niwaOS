@@ -7,12 +7,6 @@
 org	0x7c00
 bits	16
 
-Start:
-	CALL	PrintString
-	
-	cli			; Clear interrupts
-	hlt			; halt the system
-
 PrintChar:
 	MOV AH, 0x0E
 	INT 0x10	
