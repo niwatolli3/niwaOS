@@ -151,9 +151,10 @@ readCylinders:
 	JAE	.readCylindersFin	; CH >= CYLS
 	CALL	ReadSector		; CH < CYLS
 .readCylindersFin:
-	MOV SI, string
-	CALL PrintString
 	CLI
+	MOV	AX, AX_FAT_ADDR
+	ADD	AX, 0x4200
+	JMP	AX
 	HLT
 
 	TIMES 510 - ($ - $$) DB 0	; Clear the rest of the bytes with 0

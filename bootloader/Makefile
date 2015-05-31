@@ -9,10 +9,13 @@ DATAAREA_NAME = data_area
 
 mbr.img : mbr.asm
 	$(ASM) $(MBR_NAME)$(NASMFILE_SFX) -o mbr$(FLOPPYIMG_SFX)
+niwaOS.img : niwaOS.asm
+	$(ASM) niwaOS$(NASMFILE_SFX) -o niwaOS$(FLOPPYIMG_SFX)
 
-floppy : mbr.img data_area.img
+floppy : mbr.img data_area.img niwaOS.img
 	cp $(MBR_NAME)$(FLOPPYIMG_SFX) $(FLOPPY)
 	dd if=$(DATAAREA_NAME)$(FLOPPYIMG_SFX) of=$(FLOPPY) seek=1 skip=1
+	dd if=niwaOS$(FLOPPYIMG_SFX) of=$(FLOPPY) seek=33 skip=0 conv=notrunc
 
 .PHONY: clean
 clean:
