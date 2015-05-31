@@ -84,6 +84,24 @@ error:
 finReadSec:
 	RET
 
+ReadFATSectors:
+	MOV	AX, AX_FAT_ADDR ; FAT address on memory
+	MOV	ES, AX
+	MOV	CH, 0	; cylinder 0
+	MOV	DH, 0	; head 0
+	MOV	CL, 2	; sector 2
+readFATLoop:
+	CALL	ReadSector
+	MOV	AX, ES
+	ADD	AX, [BPB_BytsPerSec]	; 512bytes = 1 sector
+	MOV	ES, AX
+	INC	CL
+	CMP	CL, 18
+	JA	fin		; if CL > 18
+	JMP	readFATLoop	; if CL <= 18
+
+fin:
+	RET
 BOOT:
 	;*************
 	;init register
@@ -101,21 +119,38 @@ BOOT:
 	MOV	DS, AX
 	MOV	ES, AX
 	
-readFATSectors:
+	CALL ReadFATSectors
+	CALL ResetFDD
+readCylinders:
 	MOV	AX, AX_FAT_ADDR ; FAT address on memory
+	ADD	AX, [BPB_BytsPerSec]	; 512bytes = 1 sector
+	MOV	BX, 19
+	MUL	BX			; AX * BX(19sectors)
 	MOV	ES, AX
 	MOV	CH, 0	; cylinder 0
-	MOV	DH, 0	; head 0
-	MOV	CL, 2	; sector 2
+	MOV	DH, 1	; head 1 (back)
+	MOV	CL, 1	; sector 1
 	CALL	ReadSector
 	MOV	AX, ES
-	ADD	AX, [BPB_BytsPerSec]	; 512bytes = 1 sector
+	ADD	AX, [BPB_BytsPerSec]
 	MOV	ES, AX
 	INC	CL
 	CMP	CL, 18
-	JA	fin		; if CL > 18
-	CALL	ReadSector	; if CL <= 18
-fin:
+	JA	.clNext		; CL > 18
+	CALL	ReadSector	; CL <= 18
+.clNext:
+	MOV	CL, 1		; sector = 1
+	INC	DH		; head++
+	CMP	DH, 2		
+	JAE	.dhNext		; DH >= 2
+	CALL	ReadSector	; DH < 2
+.dhNext:
+	MOV	DH, 0		;head 0
+	INC	CH		;cylinder++
+	CMP	CH, CYLS
+	JAE	.readCylindersFin	; CH >= CYLS
+	CALL	ReadSector		; CH < CYLS
+.readCylindersFin:
 	MOV SI, string
 	CALL PrintString
 	CLI

@@ -17,3 +17,4 @@ floppy : mbr.img data_area.img
 .PHONY: clean
 clean:
 	-rm $(MBR_NAME)$(FLOPPYIMG_SFX)
+	-rm $(FLOPPY)
