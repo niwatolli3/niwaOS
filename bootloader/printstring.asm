@@ -15,7 +15,8 @@ PrintChar:
 ; input: SI(pointer of string)
 PrintString:
 	;MOV SI, string
-	
+	PUSH AX
+	PUSH SI
 	string_loop:
 	MOV AL, [SI]
 	INC SI
@@ -25,6 +26,8 @@ PrintString:
 	JMP string_loop
 
 	exit_print_string:
+	POP AX
+	POP SI
 	RET
 ;string:
 ;	db 'Hello World!', 0

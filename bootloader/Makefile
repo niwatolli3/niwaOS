@@ -17,6 +17,9 @@ floppy : mbr.img data_area.img niwaOS.img
 	dd if=$(DATAAREA_NAME)$(FLOPPYIMG_SFX) of=$(FLOPPY) seek=1 skip=1
 	dd if=niwaOS$(FLOPPYIMG_SFX) of=$(FLOPPY) seek=33 skip=0 conv=notrunc
 
+run : floppy.img
+	qemu-230 -L . -m 32 -localtime -vga std -fda floppy.img
+
 .PHONY: clean
 clean:
 	-rm $(MBR_NAME)$(FLOPPYIMG_SFX)

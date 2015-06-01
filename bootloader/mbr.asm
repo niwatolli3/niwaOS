@@ -39,18 +39,22 @@ BS_FilSysType	DB	"FAT12   "
 %include "printstring.asm"
 
 string:
-	DB 'Hello World!', 0
+	DB 'Hello World!', 0x0d, 0x0a, 0
 stringError:
 	DB 'FDD Read Error!', 0
 stringResetFDDError:
 	DB 'FDD Reset Error!', 0
 
 ResetFDD:
+	PUSH	DX
+	PUSH	AX
 	MOV	DL, 0x00	; drive A
 	MOV	AH, 0x00
 	MOV	DL, 0x00
 	INT	0x13
 	JC	ResetFDDFailed
+	POP	AX
+	POP	DX
 	RET
 ResetFDDFailed:
 	MOV SI, stringResetFDDError
@@ -64,8 +68,13 @@ ResetFDDFailed:
 ; input: DH: head (0-indexed)
 ; input: CL: sector (1-indexed, 1-18) ;*************
 ReadSector:
+	PUSH	SI
+	PUSH	AX
+	PUSH	BX
+	PUSH	DX
 	MOV	SI, 0	; retry count
 retry:
+	CALL	ResetFDD
 	MOV	AH, 0x02	; AH=0x02 : disk read
 	MOV 	AL, 1	; 1 sector
 	MOV	BX, 0
@@ -75,13 +84,16 @@ retry:
 	INC	SI
 	CMP	SI, 5
 	JAE	error
-	CALL	ResetFDD
 	JMP	retry
 error:
 	MOV SI, stringError
 	CALL PrintString
 	HLT
 finReadSec:
+	POP	DX
+	POP	BX
+	POP	AX
+	POP	SI
 	RET
 
 ReadFATSectors:
@@ -91,12 +103,16 @@ ReadFATSectors:
 	MOV	DH, 0	; head 0
 	MOV	CL, 2	; sector 2
 readFATLoop:
+	MOV	SI, string
+	CALL	PrintString
 	CALL	ReadSector
 	MOV	AX, ES
-	ADD	AX, [BPB_BytsPerSec]	; 512bytes = 1 sector
+;	ADD	AX, [BPB_BytsPerSec]>>1	; 512bytes = 1 sector
+	ADD	AX, 0x0020
 	MOV	ES, AX
 	INC	CL
 	CMP	CL, 18
+
 	JA	fin		; if CL > 18
 	JMP	readFATLoop	; if CL <= 18
 
@@ -120,36 +136,39 @@ BOOT:
 	MOV	ES, AX
 	
 	CALL ReadFATSectors
-	CALL ResetFDD
 readCylinders:
-	MOV	AX, [BPB_BytsPerSec]	; 512bytes = 1 sector
-	MOV	BX, 17
-	MUL	BX			; AX * BX(19sectors)
+	;MOV	AX, [BPB_BytsPerSec]>>1	; 512bytes = 1 sector
+	MOV	AX, 0x0220	; 0x0020 * 17(sector) = 0x200
 	ADD	AX, AX_FAT_ADDR		; FAT address on memory
 	MOV	ES, AX
 	MOV	CH, 0	; cylinder 0
 	MOV	DH, 1	; head 1 (back)
 	MOV	CL, 1	; sector 1
 	CALL	ReadSector
+.readClMore
 	MOV	AX, ES
-	ADD	AX, [BPB_BytsPerSec]
+;	ADD	AX, [BPB_BytsPerSec]>>1
+	ADD	AX, 0x0020
 	MOV	ES, AX
 	INC	CL
 	CMP	CL, 18
 	JA	.clNext		; CL > 18
 	CALL	ReadSector	; CL <= 18
+	JMP	.readClMore
 .clNext:
 	MOV	CL, 1		; sector = 1
 	INC	DH		; head++
 	CMP	DH, 2		
 	JAE	.dhNext		; DH >= 2
 	CALL	ReadSector	; DH < 2
+	JMP	.readClMore
 .dhNext:
 	MOV	DH, 0		;head 0
 	INC	CH		;cylinder++
 	CMP	CH, CYLS
 	JAE	.readCylindersFin	; CH >= CYLS
 	CALL	ReadSector		; CH < CYLS
+	JMP	.readClMore
 .readCylindersFin:
 	MOV	SI, 0xBE00
 	JMP	SI			; 0x7E00+0x4200-512
