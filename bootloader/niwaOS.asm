@@ -42,6 +42,15 @@ gdt_toc:
 	DW	GDT_DESC_BYTE*GDT_NUM	; GDT Size
 	DD	_gdt			; GDT Addr
 
+sel_cs0:
+	DB	00b	; RPL
+	DB	0b	; TI	; 0:GDT
+	DB	0000000001000b	; Index
+sel_ds0:
+	DB	00b	; RPL
+	DB	0b	; TI	; 0:GDT
+	DB	0000000010000b	; Index
+
 ;*******************************
 ;Setup Global Descriptor Table
 ;*******************************
@@ -55,6 +64,9 @@ SetupGDT:
 
 boot:
 	CALL	SetupGDT
+_setup_segsel:	; setup segment selector
+	MOV	CS, [sel_cs0]
+	MOV	DS, [sel_ds0]
 
 	MOV	AL, 0x13	; VGA, 320x200x8bit color
 	MOV	AH, 0x00
