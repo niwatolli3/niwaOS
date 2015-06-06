@@ -145,7 +145,7 @@ readCylinders:
 	MOV	DH, 1	; head 1 (back)
 	MOV	CL, 1	; sector 1
 	CALL	ReadSector
-.readClMore
+.readClMore:
 	MOV	AX, ES
 ;	ADD	AX, [BPB_BytsPerSec]>>1
 	ADD	AX, 0x0020
@@ -172,9 +172,6 @@ readCylinders:
 .readCylindersFin:
 	MOV	SI, 0xBE00
 	JMP	SI			; 0x7E00+0x4200-512
-	MOV	SI, string
-	CALL	PrintString
-	HLT
 
 	TIMES 510 - ($ - $$) DB 0	; Clear the rest of the bytes with 0
 	DW 0xAA55			; Boot signature(2byte)

@@ -1,6 +1,9 @@
 GDT_DESC_BYTE EQU 8
 GDT_NUM EQU 3	; number of GDT
 
+%define CODE_DESC	(0x08)
+%define DATA_DESC	(0x08*2)
+
 
 ;*********************************
 ; NiwaOS
@@ -9,6 +12,8 @@ ORG	0xBE00
 BITS	16
 
 JMP	boot
+
+%include "printstring.asm"
 
 ;*********************************
 ; const value
@@ -21,8 +26,7 @@ _gdt:
 	DW	0x0000
 	DW	0x0000
 	DW	0x0000
-
-	; Code Descriptor
+; Code Descriptor
 	DW	0xFFFF		; Segment Limit Low
 	DW	0x0000		; Base Address Low
 	DB	0x00		; Base Address Mid
@@ -61,16 +65,81 @@ SetupGDT:
 	STI
 	POPA
 	RET
-
+;*******************************
+; Enable A20
+;*******************************
+string_a20_2401_error_01h:
+	DB	"[E] INT2401h keycon is in secure mode", 0x00
+string_a20_2401_error_86h:
+	DB	"[E] INT2401h func not supported", 0x00
+string_a20_2402_error_01h:
+	DB	"[E] INT2402h keycon is in secure mode", 0x00
+string_a20_2402_error_86h:
+	DB	"[E] INT2402h func not supported", 0x00
+string_a20_2402_success:
+	DB	"Enable A20 Success..", 0x0d, 0x0a, 0x00
+string_a20_2402_wait:
+	DB	"Enable A20 wait...", 0x0d, 0x0a, 0x00
+EnableA20:
+	MOV	AX, 0x2401
+	INT	0x15
+	JNC	a20_2401_success
+	CMP	AH, 0x01
+	JZ	a20_2401_error_01h
+	CMP	AH, 0x86
+	JZ	a20_2401_error_86h
+a20_2401_error_01h:
+	MOV	SI, string_a20_2401_error_01h
+a20_2401_error_86h:
+	MOV	SI, string_a20_2401_error_86h
+	CALL	PrintString
+	HLT
+a20_2401_success:
+	MOV	AX, 0x2402
+	INT	0x15
+	JNC	a20_2402_success
+	CMP	AH, 0x01
+	JZ	a20_2402_error_01h
+	CMP	AH, 0x86
+	JZ	a20_2402_error_86h
+a20_2402_error_01h:
+	MOV	SI, string_a20_2402_error_01h
+a20_2402_error_86h:
+	MOV	SI, string_a20_2402_error_86h
+	CALL	PrintString
+	HLT
+a20_2402_success:
+	CMP	AL, 0x01
+	MOV	SI, string_a20_2402_wait
+	CALL	PrintString
+	JNZ	a20_2401_success	;wait A20 enabled
+	MOV	SI, string_a20_2402_success
+	CALL	PrintString
+	RET
+;
+string_goto_prot_mode:
+	DB	"go2 prot mode...", 0x0d, 0x0a, 0x00
 boot:
 	CALL	SetupGDT
-_setup_segsel:	; setup segment selector
-	MOV	CS, [sel_cs0]
-	MOV	DS, [sel_ds0]
+	CALL	EnableA20
 
-	MOV	AL, 0x13	; VGA, 320x200x8bit color
-	MOV	AH, 0x00
-	INT	0x10
-fin:
-	HLT
-	JMP fin
+j	; go to the protection mode
+;	MOV	SI, string_goto_prot_mode
+;	CALL	PrintString
+;	MOV	EAX, CR0
+;	OR	EAX, 0x01
+;	MOV	CR0, EAX
+;	JMP	CODE_DESC:proto_mode_start
+;
+;;********************
+;;Protected Mode
+;;********************
+;[BITS 32]
+;proto_mode_start:
+;	MOV	AX, DATA_DESC
+;	MOV	DS, AX
+;	MOV	ES, AX
+;	MOV	FS, AX
+;	MOV	GS, AX
+;	MOV	SS, AX
+;	
