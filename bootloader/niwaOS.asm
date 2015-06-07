@@ -18,6 +18,9 @@ JMP	boot
 ;*********************************
 ; const value
 ;*********************************
+%define KERN_IMG_SIZE	(512*10)
+%define KERN_IMG_RMODE_BASE	(0xBE00+0x4400-0x4200)
+%define KERN_IMG_PMODE_BASE	0x100000
 
 ; GDT Table
 _gdt:
@@ -123,23 +126,40 @@ boot:
 	CALL	SetupGDT
 	CALL	EnableA20
 
-j	; go to the protection mode
-;	MOV	SI, string_goto_prot_mode
-;	CALL	PrintString
-;	MOV	EAX, CR0
-;	OR	EAX, 0x01
-;	MOV	CR0, EAX
-;	JMP	CODE_DESC:proto_mode_start
-;
-;;********************
-;;Protected Mode
-;;********************
-;[BITS 32]
-;proto_mode_start:
-;	MOV	AX, DATA_DESC
-;	MOV	DS, AX
-;	MOV	ES, AX
-;	MOV	FS, AX
-;	MOV	GS, AX
-;	MOV	SS, AX
-;	
+	; go to the protection mode
+	MOV	SI, string_goto_prot_mode
+	CALL	PrintString
+	MOV	EAX, CR0
+	OR	EAX, 0x01
+	MOV	CR0, EAX
+	JMP	CODE_DESC:prot_mode_start
+
+;********************
+;Protected Mode
+;********************
+[BITS 32]
+prot_mode_start:
+	MOV	AX, DATA_DESC
+	MOV	BX, AX
+	MOV	DS, AX
+	MOV	ES, AX
+	MOV	FS, AX
+	MOV	GS, AX
+	MOV	SS, AX
+	
+	MOV	ESP, 0x90000
+CopyKernImg:
+; ESIからEDIのアドレスに1byteずつ,ECX回繰り返す
+	MOV	ESI, KERN_IMG_RMODE_BASE
+	MOV	EDI, KERN_IMG_PMODE_BASE
+	MOV	ECX, KERN_IMG_SIZE
+REP	MOVSD
+	JMP	run_kernel
+fail_exec_kern:
+	HLT
+	JMP	fail_exec_kern
+run_kernel:
+	MOV	EBP, KERN_IMG_PMODE_BASE
+	CLI
+	CALL	EBP
+	JMP	fail_exec_kern
